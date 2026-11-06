@@ -1,4 +1,5 @@
 import type { ChatGroup, ChatGroupsState } from '../shared/chat-groups.js';
+import type { StudioChat, StudioSend, StudioState, StudioControls } from '../shared/ai-studio.js';
 import type { DesktopAskPending } from '../shared/desktop-ask.js';
 import type { WorkspaceTerminalEvent, WorkspaceTerminalInfo } from '../shared/workspace-terminal.js';
 import type { ApprovalCardView } from '../shared/approval-wait.js';
@@ -427,6 +428,12 @@ const api = {
   cancelSessionCompaction: (id: string) => call<SessionControlsView>('sessions:cancelCompaction', { id }),
   draftTaskPlan: (text: string, backend: 'api' | 'chatgpt', requestId?: string) => call<string[]>('sessions:plan', { text, backend, requestId }),
   sendInput: (input: InputArgs) => call<InputEntry>('sessions:send', input),
+  studioState: () => call<StudioState>('studio:state'),
+  studioControls: (sessionId: string) => call<StudioControls>('studio:controls', { sessionId }),
+  studioHistory: (id: string) => call<SessionEvent[]>('studio:history', { id }),
+  studioSend: (input: StudioSend) => call<StudioChat>('studio:send', input),
+  studioOpen: (id: string) => call<void>('studio:open', { id }),
+  studioStop: (id: string) => call<void>('studio:stop', { id }),
   retryInputBrowser: (id: string) => call<InputEntry | null>('sessions:retryBrowser', { id }),
   listInputs: () => call<InputEntry[]>('sessions:outbox'),
   listPausedHelpers: () => call<Array<{ id: string; sourceSessionId: string }>>('sessions:pausedHelpers'),

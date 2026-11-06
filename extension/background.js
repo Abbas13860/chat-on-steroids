@@ -2,11 +2,11 @@
  * Service worker: the only part of the extension that talks to the app.
  *
  * The pairing token lives here and in chrome.storage.local, never in a content
- * script and never in the page. A content script that were somehow compromised can
- * ask this worker to post observations about the page it is already reading; it
- * cannot read the token, cannot reach the app on its own (the app refuses a
- * https://chatgpt.com origin), and there is no message that makes the app touch a
- * file, run a command or change a permission.
+ * script and never in the page. ChatGPT scripts post observations, not local tools.
+ * A marked AI Studio page can also settle one app-created coding job. Main validates
+ * that job's browser/document custody and fresh tool nonce before invoking the normal
+ * Core guards; there is no generic file/command/settings dispatch message here.
+ * Website origins cannot directly reach the paired bridge or read its token.
  *
  * Discovery is a scan of five fixed loopback ports for a /hello that identifies the
  * app. Nothing is broadcast and nothing listens.
@@ -21,6 +21,7 @@
  */
 
 import { createBrowserControl } from './browser-control.js';
+import { studioMessage } from './ai-studio-background.js';
 import { createActiveTabs } from './active-tabs.js';
 // Side-effect import: CLF_I18N serves catalogs to content scripts, which cannot read them.
 import './i18n.js';
@@ -5338,6 +5339,10 @@ function publishCompanionDiagnostics(changed = false) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'ai_studio') {
+    studioMessage(message, sender, call).then(sendResponse, () => sendResponse({ ok: false, error: 'studio_bridge_failed' }));
+    return true;
+  }
   const handler = message && typeof message.type === 'string' ? HANDLERS[message.type] : null;
   if (!handler) {
     sendResponse({ ok: false, error: 'unknown_message' });

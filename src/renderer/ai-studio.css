@@ -1,0 +1,7 @@
+.composer-provider-controls { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.composer-provider-controls select { max-width: 170px; min-width: 0; padding: 6px 10px; border: 1px solid var(--edge); border-radius: var(--pill); background: var(--card); color: var(--ink); font: inherit; font-size: 12px; text-overflow: ellipsis; }
+.composer-provider-controls select:focus-visible { outline: 2px solid var(--soft); outline-offset: 2px; }
+.composer[data-provider='studio'] :is(#modelMenu, #contextMeter, #composerSettings, #createPlan, #attachImages, #composerSelectedSkills, #skillPicker) { display: none !important; }
+.composer[data-provider='studio'] .composer-provider-controls { flex: 1; }
+.composer[data-provider='studio'] #composerStatus { color: var(--soft); }
+@media (max-width: 900px) { .composer-provider-controls select { max-width: 140px; font-size: 11px; } }

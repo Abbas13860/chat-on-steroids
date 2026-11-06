@@ -1,4 +1,7 @@
 import { registerAgentOutputIpc } from './agent-output-ipc.js';
+import { registerStudioIpc } from './ai-studio/ipc.js';
+import { forgetStudioSession, openStudioSession } from './ai-studio/index.js';
+import { isStudioConversation } from '../shared/ai-studio.js';
 import { onChatsAtOnceChange, resumeAutomaticSends } from './chats-at-once.js';
 import { MAX_CHAT_STYLE_CHARS } from '../shared/chat-style.js';
 import { registerWorkspaceTerminalIpc } from './workspace-terminal-ipc.js';
@@ -729,6 +732,11 @@ function handle<T>(channel: string, fn: (payload: unknown, event: IpcMainInvokeE
 export async function openSessionChat(id: string): Promise<void> {
   const summary = await getSession(id);
   const conversationId = summary?.conversationId;
+  if (isStudioConversation(conversationId)) {
+    if (!await startBridge()) throw new Error('The browser bridge could not start.');
+    await openStudioSession(id);
+    return;
+  }
   if (!conversationId || !/^[0-9a-z-]{8,64}$/i.test(conversationId)) {
     throw new Error('This session has no valid ChatGPT conversation');
   }
@@ -752,6 +760,7 @@ export function personsMessage(entry: InputEntry): boolean {
 }
 
 export function registerIpc(getWindow: () => BrowserWindow | null, quitToInstall: () => void): void {
+  registerStudioIpc(getWindow);
   registerWorkspaceTerminalIpc(getWindow);
   registerAgentOutputIpc(getWindow);
   registerDictationIpc(getWindow);
@@ -2380,6 +2389,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null, quitToInstall
           ...committedResumeAncestorsFromSummary(summary, summary.conversationId)
         ], false);
       }
+      if (isStudioConversation(summary?.conversationId)) await forgetStudioSession(id);
       // Detach first. The recorder maps live ChatGPT conversations to session ids, so
       // deleting the folder underneath a live one left it appending to a session that no
       // longer existed — the events went to a resurrected half-session with no summary.

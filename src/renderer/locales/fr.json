@@ -3985,5 +3985,12 @@
   "Run it yourself, in your own terminal: Chat On Steroids does not run or check it.": "Exécutez-la vous-même, dans votre propre terminal : Chat On Steroids ne l’exécute ni ne la vérifie.",
   "{0} expected files": "{0} fichiers attendus",
   "{0} expected files|one": "{0} fichier attendu",
-  "{0} expected files|many": "{0} de fichiers attendus"
+  "{0} expected files|many": "{0} de fichiers attendus",
+  "Choose an approved folder": "Choisir un dossier autorisé",
+  "Approved folder": "Dossier autorisé",
+  "Choose the model in AI Studio. No API key required.": "Choisissez le modèle dans AI Studio. Aucune clé API requise.",
+  "Google AI Studio": "Google AI Studio",
+  "AI Studio supports text messages and local coding. Remove attachments before sending.": "AI Studio prend en charge le texte et le développement local. Retirez les pièces jointes avant l’envoi.",
+  "AI Studio runs the coding task directly. Send the request without a generated workflow.": "AI Studio exécute directement la tâche de développement. Envoyez la demande sans workflow généré.",
+  "The browser bridge could not start.": "Impossible de démarrer la connexion au navigateur."
 }

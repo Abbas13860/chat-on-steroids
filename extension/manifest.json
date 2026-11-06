@@ -41,6 +41,11 @@
   },
   "content_scripts": [
     {
+      "matches": ["https://aistudio.google.com/prompts/*"],
+      "js": ["ai-studio-dom.js", "ai-studio.js"],
+      "run_at": "document_start"
+    },
+    {
       "matches": [
         "https://chatgpt.com/*",
         "https://chat.openai.com/*"

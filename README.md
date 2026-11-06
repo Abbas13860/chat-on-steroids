@@ -1,3 +1,5 @@
+> **Custom fork:** Google AI Studio web chat and local coding are available from the sidebar. See [setup and current capabilities](docs/google-ai-studio.md). The download links below point to the original upstream app and do not include this fork's changes.
+
 <p align="center"><img src="docs/images/readme-hero.svg?v=2" width="960" alt="Turn ChatGPT into Codex-style local coding. Chat On Steroids: Your files. Your terminal. Your ChatGPT plan." /></p>
 
 <p align="center">

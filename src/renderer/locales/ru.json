@@ -4069,5 +4069,12 @@
   "{0} expected files": "Ожидаемых файлов: {0}",
   "{0} expected files|one": "Ожидаемых файлов: {0}",
   "{0} expected files|many": "Ожидаемых файлов: {0}",
-  "{0} expected files|few": "Ожидаемых файлов: {0}"
+  "{0} expected files|few": "Ожидаемых файлов: {0}",
+  "Choose an approved folder": "Выберите разрешённую папку",
+  "Approved folder": "Разрешённая папка",
+  "Choose the model in AI Studio. No API key required.": "Выберите модель в AI Studio. Ключ API не требуется.",
+  "Google AI Studio": "Google AI Studio",
+  "AI Studio supports text messages and local coding. Remove attachments before sending.": "AI Studio поддерживает текст и локальное программирование. Перед отправкой удалите вложения.",
+  "AI Studio runs the coding task directly. Send the request without a generated workflow.": "AI Studio выполняет задачу программирования напрямую. Отправьте запрос без созданного рабочего процесса.",
+  "The browser bridge could not start.": "Не удалось запустить подключение к браузеру."
 }

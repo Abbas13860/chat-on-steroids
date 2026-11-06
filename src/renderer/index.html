@@ -36,6 +36,7 @@
         <div class="sidebar-brand"><span class="mark"><svg class="ico" viewBox="0 0 24 24"><use href="#i-mark" /></svg></span><strong>Chat On Steroids</strong><button class="btn sidebar-brand-seen" id="markAllSeen" type="button" title="Mark all as seen" aria-label="Mark all as seen" hidden><i class="ico ph ph-checks" aria-hidden="true"></i></button><button class="btn sidebar-brand-search" id="searchChatsButton" type="button" aria-haspopup="dialog" aria-controls="searchDialog" title="Search chats" aria-label="Search chats"><i class="ico ph ph-magnifying-glass" aria-hidden="true"></i></button></div>
         <div class="sidebar-primary" id="sidebarPrimary">
           <button class="btn new-chat" id="newChat" type="button"><i class="ico ph ph-pencil-simple" aria-hidden="true"></i>New chat</button>
+          <button class="btn sidebar-primary-link" id="sidebarStudio" data-sidebar-page="studio" type="button"><i class="ico ph ph-sparkle" aria-hidden="true"></i>Google AI Studio</button>
           <button class="btn sidebar-primary-link" id="sidebarPlugins" data-sidebar-page="plugins" type="button"><i class="ico ph ph-puzzle-piece" aria-hidden="true"></i>Plugins</button>
           <button class="btn sidebar-primary-link" id="sidebarSkills" data-sidebar-page="skills" type="button"><i class="ico ph ph-cube" aria-hidden="true"></i>Skills</button>
           <button class="btn sidebar-primary-link" id="sidebarPets" data-sidebar-page="pets" type="button"><i class="ico ph ph-paw-print" aria-hidden="true"></i>Pets</button>
@@ -1479,9 +1480,10 @@
             <form class="composer" id="composer">
               <div id="skillPicker" class="skill-autocomplete" aria-label="Skills" hidden></div>
               <div id="composerSelectedSkills" class="composer-selected-skills" aria-label="Selected skills" hidden></div>
-              <label class="sr-only" for="chatInput">Message ChatGPT</label>
+              <label class="sr-only" for="chatInput">Message</label>
               <div id="composerImages" class="composer-images" hidden></div><textarea dir="auto" id="chatInput" rows="1" placeholder="Ask anything…"></textarea>
               <div class="composer-toolbar">
+                <div class="composer-provider-controls"><select id="chatProvider" aria-label="Model"><option value="chatgpt">ChatGPT</option><option value="studio">Google AI Studio</option></select><select id="chatProviderRoot" aria-label="Approved folder" hidden></select></div>
                 <div class="composer-primary-controls">
                 <details class="composer-menu" id="attachmentMenu">
                   <summary aria-label="Add attachments" title="Add attachments"><i class="ico ph ph-plus" aria-hidden="true"></i></summary>

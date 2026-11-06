@@ -1,4 +1,5 @@
 import { DEFAULT_CHAT_PERSONALITY, DEFAULT_CHAT_WRITING_STYLE } from '../shared/chat-style.js';
+import './ai-studio.css';
 import { sendCheckUrl } from '../shared/send-check.js';
 import { applyPhonePush, initPhonePushSettings, readPhonePush } from './phone-push-settings.js';
 import { initBrowserSetup } from './setup-browser.js';
@@ -377,6 +378,7 @@ $('newChat').addEventListener('click', () => showTab('chat'));
 $('sidebarPlugins').addEventListener('click', () => showTab('plugins'));
 $('sidebarPets').addEventListener('click', () => showTab('pets'));
 $('sidebarSkills').addEventListener('click', () => showTab('skills'));
+$('sidebarStudio').addEventListener('click', () => { showTab('chat'); document.dispatchEvent(new Event('studio:new-chat')); });
 api.onPetOverlayOpenOwner(screen => showTab(screen));
 $('addProject').addEventListener('click', () => showTab('chat'));
 let zoomFactor = 1;

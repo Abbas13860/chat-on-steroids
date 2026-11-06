@@ -758,7 +758,7 @@ async function dispatchTracked(
   // answered, and "was this connector ever actually used from ChatGPT" is a per-connector
   // question the setup screen has to answer honestly.
   surfaceToolCallAt.set(surface, Date.now());
-  noteConnectorUse(surface, 'tool');
+  if (context.caller.provider !== 'google-ai-studio') noteConnectorUse(surface, 'tool');
   // Proof for connector identity: this exact request reached this surface's own endpoint.
   if (!nested) noteServedRequest(requestId, surface);
   const isFinish = isFinishCall(name, args);

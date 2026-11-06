@@ -263,6 +263,7 @@ Paths in this section are repository-relative. Most mechanisms have `main`, `sha
 | Agents | `src/main/agents.ts`, `src/renderer/{agent-panel,agent-communication,agent-activity}.ts`: independent prime families, staged mutations and addressed messages. A worker opens on its Activity (#105): its task, its tool calls once each in first-appearance order with their latest record, and the files its successful calls changed; `sessions:events` with `actions: true` reads only `session_start` and `tool_call` rows for it, and a window without `session_start` says earlier actions are in the conversation. |
 | Worker Git worktrees | `src/main/worktrees/`, `src/main/workspace.ts`: approved isolated checkouts, marker-verified ownership and exact worker workspace resolution. |
 | Browser orchestration | `src/main/bridge.ts`, `browser.ts`, `browser-startup.ts`, `browser-wake.ts`, `browser-window-layout.ts`, `browser-preferences.ts`; `src/shared/browser-preferences.ts`. |
+| Google AI Studio | `src/main/ai-studio/{index,broker,ipc}.ts`, `src/shared/ai-studio.ts`, provider routing in `src/renderer/chat.ts`, `src/renderer/ai-studio.css`, `extension/ai-studio{,-dom,-background}.js`: one-shot browser jobs and a coding-agent loop through the existing Core registrar, sharing the ordinary composer/timeline. See §13. |
 | Built-in browser | `src/main/cos-browser/` (`selection.ts` opt-in loading, `index.ts` lifecycle, `host.ts` windows/tabs/extension/sign-in, `tab-model.ts`, `chrome-api.ts`, `extension-worker.ts`, `match-pattern.ts`, `sign-in.ts`, `sign-in-transfer.ts`); `src/preload/cos-browser{,-worker,-sign-in}.ts`; `src/renderer/cos-browser.{html,ts,css}` toolbar and `cos-browser-sign-in.{html,ts,css}` Google sign-in card; `src/shared/cos-browser-sites.ts`. See §13 Built-in browser. |
 | Extension | `extension/{manifest.json,chatgpt-dom.js,content.js,fiber.js,background.js,usage.js,overlay.css,popup.html,popup.css,popup.js}`: injection worlds, native observations/actions, journal and UI. |
 | Models/usage | `src/main/chat-models.ts`, `session/usage.ts`, `provider-usage.ts`, `usage-tool.ts`; `src/shared/{chat-models,usage,provider-usage}.ts`; `src/renderer/{chat-models,context-meter,usage}.ts`: account observations vs local estimates. |
@@ -286,6 +287,7 @@ Paths in this section are repository-relative. Most mechanisms have `main`, `sha
 | Turn round outline | `recorder.ts` `turn_trace` → `store.ts::writeTurnTrace` / `sessions/<id>/traces/<turnId>.json` | Validated by `shared/turn-trace.ts`; the newest outline replaces the turn's; never an event or evidence. |
 | Agent progress plan | `request-plans.ts` → `store.ts::updateSessionPlan` / `sessions/<id>/plan.json` | Request-scoped storage before proof; exact session and invocation ordering on attachment; atomically replace the whole plan. |
 | Input and checkpoints | `input.ts` / `state/session-input.json` | Serialized acceptance, frozen payload, exclusive claim and receipt; stages belong here. |
+| AI Studio chat bindings | `ai-studio/index.ts` / `state/ai-studio-chats.json` | Versioned local-session/root/coding-mode/prompt-URL bindings commit before browser work. Messages and tool results remain in the canonical session store. Browser jobs, document custody and errors are process-local; no claimed send resumes or replays after restart. |
 | Native upload originals | `input-attachments.ts` / `input-attachments/` | Immutable bytes, opaque ids; outbox owns membership and retention. |
 | Project catalog | `projects.ts` / `state/projects.json` | Serialized catalog mutation; session metadata owns association. |
 | Code checkpoints | `checkpoints/store.ts` / `state/code-checkpoints.json`; tree objects in the project's own Git object store | Entry written only after `write-tree` returned its tree. Bounded per project (20); a restore's "Before restore" entry never evicts the checkpoint being restored (the oldest other one makes room). An evicted or pruned tree reads as unavailable, never as an empty comparison. |
@@ -2686,6 +2688,53 @@ reloads there and reports the hold `browser-updates-itself` instead. While Firef
 browser, its add-on is never refused work as an out-of-date companion: Firefox may update it up to a
 day after the app, while a Chromium copy on the shipped build would otherwise win every claim. The
 CoS browser's Google sign-in handoff offers only Chrome, Edge and Brave.
+
+### Google AI Studio web chats (custom fork)
+
+The ordinary composer chooses ChatGPT or Google AI Studio. The sidebar's Google AI Studio
+shortcut starts a Gemini coding chat in that same view, using the person's signed-in external
+Chrome/Edge/Brave profile and companion, without a Gemini API key or a ChatGPT tunnel.
+The native AI Studio page owns model selection, sign-in, generation and provider limits.
+The selected CoS project is bound through `assignSessionProject`; `projectWorkspace` owns its
+working folder exactly as for other chats. An unfiled chat explicitly chooses an existing
+approved local root. Neither choice grants permission. Existing chats keep their provider.
+User messages, final answers, tool results, edits and `update_plan` use the canonical store
+and ordinary timeline/files/plan views. `notifyChanged` publishes committed events; there is
+no separate provider history renderer or polling loop. Raw JSON tool envelopes stay internal.
+The initial prompt publishes the currently available Core schemas and asks the model to read
+workspace AGENTS.md before edits. Only a complete JSON tool envelope bearing that response's
+fresh nonce can request `read`, `find`, `exec_command`, `write_stdin`, `apply_patch` or
+`update_plan`. Every call uses a freshly built Core registrar, existing sandbox, live
+capabilities/read-only, command policy, exact session identity, Block/Trust and recorder.
+Tool arguments cannot supply identity. The locally witnessed response receives a namespaced
+`studio-` request correlation; it is not a claimed ChatGPT request header. Main-owned caller
+provenance also prevents this local call from earning ChatGPT connector setup proof. Tool output is
+returned as text in the same AI Studio chat. Image output is explicitly marked unattached.
+
+`StudioBroker` gives each send at most one Chrome-supplied browser/tab/document owner.
+The authenticated `/ai-studio` bridge route accepts only poll/result messages for app-created
+jobs. The background script validates the top-level AI Studio prompt origin and supplies
+sender identity; the pairing token never enters the page. The content script uses only the
+public textarea, its enabled Run button and rendered chat turns. Acceptance requires a new
+User turn bearing that send's exact app-generated receipt; Markdown reformatting cannot break
+that identity. An extra user turn refuses the result. Completion requires a new Model turn's
+own final feedback footer, with no active Stop control. Remounted history before the receipt
+does not count as new user input. Thoughts are separate and do not authorize tools. Another user message, a
+changed saved prompt, reload, closed tab, timeout or missing receipt cannot replay the send.
+Stop revokes subsequent model/tool steps and asks the native page to stop; a local command
+already admitted may still finish. Shutdown aborts these jobs before the usual tool drain.
+On restart, an abandoned canonical turn is marked interrupted without opening a browser.
+Sidebar removal also retires the provider binding; a busy chat must first be stopped.
+The loop is bounded to 64 tool steps and 200,000 response characters. Native uploads,
+Goal/Loop, multi-agent orchestration and Compact & Resume remain ChatGPT features in this
+first integration; no AI Studio UI control advertises them. The built-in browser is not used.
+
+Tests: `ai-studio.test.ts` covers DOM fixtures, nonce validation, one-shot custody and wrong
+tab/document/URL cases; `ai-studio-integration.test.ts` exercises real Core file reads/patches,
+recording, live Read-only revocation, Stop, shared project cwd and plans. `ai-studio-restore`
+covers restart without replay; `scripts/verify-ai-studio.cjs` renders the production shared
+composer/timeline in Chromium with synthetic state. Fixture/source success does not prove that a
+specific installed companion or Google account completed the full live workflow.
 
 ### Built-in browser
 

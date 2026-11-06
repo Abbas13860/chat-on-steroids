@@ -1,5 +1,6 @@
 import { closeRemoteSessions } from './remote/ssh.js';
 import { stopInputStartup } from './session/start-input.js';
+import { stopStudio } from './ai-studio/index.js';
 import { browserExtensionRequired } from '../shared/types.js';
 import { requestSessionFinishGoal, setFinishNotifier } from './session/finish.js';
 /**
@@ -842,6 +843,7 @@ app.on('will-quit', (event) => {
   if (shutdownStarted) return;
   shutdownStarted = true;
   stopInputStartup();
+  stopStudio();
   tray?.destroy();
   tray = null;
   // A person who pressed Restart and install sees what happens until the installer takes over;

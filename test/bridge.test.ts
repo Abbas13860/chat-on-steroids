@@ -447,6 +447,18 @@ beforeEach(async () => {
   token = null;
 });
 
+it('protects the AI Studio route with the existing origin, token and browser identity checks', async () => {
+  const body = { action: 'poll', chatId: randomUUID(), owner: { tab: 1, document: 'studio-test-document' }, url: 'https://aistudio.google.com/prompts/new_chat' };
+  expect((await request('POST', '/ai-studio', { body, auth: null, browser: 'studiobrowser123456' })).status).toBe(401);
+  await pair();
+  expect((await request('POST', '/ai-studio', { body, origin: 'https://aistudio.google.com', browser: 'studiobrowser123456' })).status).toBe(403);
+  expect((await request('POST', '/ai-studio', { body })).status).toBe(400);
+  const forged = await request('POST', '/ai-studio', { browser: 'studiobrowser123456', body: { ...body, tool: 'exec_command', arguments: { cmd: 'must not run' } } });
+  expect(forged.status).toBe(400); expect(forged.body).toEqual({ error: 'invalid_studio_request' });
+  const unknown = await request('POST', '/ai-studio', { body, browser: 'studiobrowser123456' });
+  expect(unknown.status).toBe(400); expect(unknown.body).toEqual({ error: 'invalid_studio_request' });
+});
+
 describe('lost first-message opening', () => {
   const browser = 'openingownerbrowser1234', other = 'otheropeningbrowser1234';
   let input: typeof import('../src/main/session/input.js');

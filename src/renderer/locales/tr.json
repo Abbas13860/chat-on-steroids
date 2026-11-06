@@ -3901,5 +3901,12 @@
   "From the sub-agent “{0}”": "“{0}” yardımcı ajanından",
   "Run it yourself, in your own terminal: Chat On Steroids does not run or check it.": "Kendi terminalinizde kendiniz çalıştırın: Chat On Steroids bunu çalıştırmaz ve denetlemez.",
   "{0} expected files": "{0} beklenen dosya",
-  "{0} expected files|one": "{0} beklenen dosya"
+  "{0} expected files|one": "{0} beklenen dosya",
+  "Choose an approved folder": "İzin verilen bir klasör seçin",
+  "Approved folder": "İzin verilen klasör",
+  "Choose the model in AI Studio. No API key required.": "Modeli AI Studio üzerinden seçin. API anahtarı gerekmez.",
+  "Google AI Studio": "Google AI Studio",
+  "AI Studio supports text messages and local coding. Remove attachments before sending.": "AI Studio metin mesajlarını ve yerel kodlamayı destekler. Göndermeden önce ekleri kaldırın.",
+  "AI Studio runs the coding task directly. Send the request without a generated workflow.": "AI Studio kodlama görevini doğrudan çalıştırır. İsteği oluşturulmuş iş akışı olmadan gönderin.",
+  "The browser bridge could not start.": "Tarayıcı bağlantısı başlatılamadı."
 }

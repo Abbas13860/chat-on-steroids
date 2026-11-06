@@ -3817,5 +3817,12 @@
   "Refused to check a step for you": "已拒絕查看需要你執行的步驟",
   "From the sub-agent “{0}”": "來自子代理「{0}」",
   "Run it yourself, in your own terminal: Chat On Steroids does not run or check it.": "請在你自己的終端機中親自執行：Chat On Steroids 不會執行或檢查它。",
-  "{0} expected files": "{0} 個預期檔案"
+  "{0} expected files": "{0} 個預期檔案",
+  "Choose an approved folder": "選擇已授權的資料夾",
+  "Approved folder": "已授權的資料夾",
+  "Choose the model in AI Studio. No API key required.": "在 AI Studio 中選擇模型，不需要 API 金鑰。",
+  "Google AI Studio": "Google AI Studio",
+  "AI Studio supports text messages and local coding. Remove attachments before sending.": "AI Studio 支援文字訊息和本機程式開發。請先移除附件再傳送。",
+  "AI Studio runs the coding task directly. Send the request without a generated workflow.": "AI Studio 會直接執行程式開發工作。請傳送請求，不要附加產生的工作流程。",
+  "The browser bridge could not start.": "無法啟動瀏覽器連線。"
 }

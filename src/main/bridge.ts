@@ -2896,9 +2896,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // is simply issued to whoever asks on 127.0.0.1 rather than to whoever can read the
     // window. What that gives up is stated plainly: any program already running as this
     // user can obtain the token, and with it read recorded ChatGPT activity and queue an
-    // "open a fresh chat" command. It can still not read a file, run anything, or change
-    // a permission — the bridge has no route that does. A web page cannot: originOf
-    // refuses anything that is not a chrome-extension:// origin, above.
+    // "open a fresh chat" command. There is no generic filesystem/command/settings route.
+    // This fork additionally lets a paired peer settle an active AI Studio coding job;
+    // a valid fresh result can invoke the session's enabled Core tools. The credential
+    // therefore trusts a local peer for that active job, not just for observations.
+    // A web page cannot call it: originOf refuses website origins above.
     // Automatic provisioning joins the current connection generation. Multiple
     // browser profiles must not continually revoke each other. Legacy pairing and
     // explicit reconnect still rotate the token; Disconnect revokes every profile.
@@ -2945,6 +2947,20 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // consume the browser's shared budget before failing origin/authentication.
   if (rateLimited()) return json(res, 429, { error: 'rate_limited' }, origin);
   if (noteBrowserSeen(req)) changed();
+
+  // The paired worker supplies Chrome's exact top-frame/tab/document identity. This endpoint
+  // only settles an app-created browser job; it never accepts a tool name or filesystem action.
+  if (route === '/ai-studio' && req.method === 'POST') {
+    const browser = browserOf(req);
+    if (!browser) return json(res, 400, { error: 'invalid_browser_request' }, origin);
+    try {
+      const body = await readBody(req);
+      const { studioPageRequest } = await import('./ai-studio/index.js');
+      return json(res, 200, await studioPageRequest(body, browser), origin);
+    } catch {
+      return json(res, 400, { error: 'invalid_studio_request' }, origin);
+    }
+  }
 
   // Only an explicit login operation accepts a session. Never put cookies in diagnostics,
   // command journals, status snapshots, recorder events or HTTP error descriptions.

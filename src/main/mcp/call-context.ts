@@ -44,6 +44,8 @@ export interface CallEvidence {
  * recorder writes down on purpose.
  */
 export interface CallCaller {
+  /** Main-owned web-provider provenance; never accepted from a model/tool argument. */
+  provider?: 'google-ai-studio';
   /** Native request anchoring a host conversation-metadata proof, when used. */
   providerSessionAnchor?: string;
   transportKey: string | null;

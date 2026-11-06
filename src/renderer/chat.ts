@@ -1,4 +1,5 @@
 import { ageOf, countdownClock } from '../shared/age.js';
+import { isStudioConversation, type StudioChatView } from '../shared/ai-studio.js';
 import { DEFAULT_CHAT_PERSONALITY, DEFAULT_CHAT_WRITING_STYLE, MAX_CHAT_STYLE_CHARS } from '../shared/chat-style.js';
 import { hasProviderDirective, resolvedCapture, withoutProviderDirectives } from '../shared/content-reference.js';
 import { completedDilText } from '../shared/dil-tables.js';
@@ -1382,6 +1383,13 @@ function sessionRow(summary: SessionSummary): HTMLElement {
       });
     }
   }
+  if (summary.conversationId?.startsWith('studio-')) {
+    // These browser chats use their provider panel's fixed folder and send path.
+    // ChatGPT links, scheduling and project reassignment do not describe that provider.
+    const supported = new Set(['pin', 'open', 'block', 'trust']);
+    items.splice(0, items.length, ...items.filter(item => supported.has(item.action)));
+    remove.title = () => t('Remove');
+  }
   items.push(remove);
   const more = el('button', 'btn row-menu-button sess-menu') as HTMLButtonElement;
   more.type = 'button'; more.dataset.rowMenu = owner; more.append(icon('i-more-vertical'));
@@ -1653,6 +1661,7 @@ function mergeSessionRows(rows: SessionSummary[]): void {
 
 let selectedTabFollow: ReturnType<typeof createSelectedTabFollow> | null = null;
 function requestSelectedTabFollow(id: string | null): void {
+  if (id && isStudioConversation(sessions.find(row => row.id === id)?.conversationId)) id = null;
   selectedTabFollow?.select(id === null ? null : sessions.find(row => row.id === id) ?? { id, conversationId: null, origin: null });
 }
 
@@ -1708,7 +1717,7 @@ async function loadSessions(detail: 'reread' | 'changed' = 'reread'): Promise<vo
   paintSessions();
   chatSearch?.refresh();
   const row = selectedId === null ? undefined : sessions.find(entry => entry.id === selectedId);
-  selectedTabFollow?.observe(row);
+  selectedTabFollow?.observe(isStudioConversation(row?.conversationId) ? undefined : row);
   if (detail === 'reread' || selectedId === null || detailFor !== selectedId || changed.all || changed.ids.has(selectedId) ||
       row?.updatedAt !== detailStamp?.updatedAt || row?.events !== detailStamp?.events) await loadDetail();
   else void refreshSessionControls();
@@ -3203,7 +3212,73 @@ let followUpTurn: string | null = null;
 function followUpQueues(): boolean {
   return deps.state()?.config.ui.followUp === 'queue';
 }
+const studioDraftProviders = new Map<string, 'chatgpt' | 'studio'>();
+let studioView: StudioChatView | null = null;
+let studioSubmitting = false;
+function studioSelected(): boolean {
+  return selectedId ? isStudioConversation(sessions.find(row => row.id === selectedId)?.conversationId)
+    : $<HTMLSelectElement>('chatProvider').value === 'studio';
+}
+function paintComposerProvider(): boolean {
+  const provider = $<HTMLSelectElement>('chatProvider');
+  if (selectedId) provider.value = isStudioConversation(sessions.find(row => row.id === selectedId)?.conversationId) ? 'studio' : 'chatgpt';
+  else provider.value = newChatBranch ? 'chatgpt' : studioDraftProviders.get(draftKey()) ?? 'chatgpt';
+  provider.disabled = !!selectedId || !!newChatBranch;
+  const studio = provider.value === 'studio';
+  const composer = $('composer');
+  if (!studio && composer.dataset.provider === 'studio') $('composerStatus').textContent = '';
+  composer.dataset.provider = studio ? 'studio' : 'chatgpt';
+  const roots = $<HTMLSelectElement>('chatProviderRoot');
+  const choices = (deps.state()?.config.roots ?? []).filter(root => !root.remote);
+  const signature = JSON.stringify(choices);
+  if (roots.dataset.choices !== signature) {
+    const selected = roots.value;
+    roots.replaceChildren(new Option(t('Choose an approved folder'), ''), ...choices.map(root => new Option(root.name, root.name)));
+    roots.value = choices.some(root => root.name === selected) ? selected : choices.length === 1 ? choices[0]!.name : '';
+    roots.dataset.choices = signature;
+  }
+  roots.hidden = !studio || !!selectedId || !!selectedLocalProject();
+  return studio;
+}
+function paintStudioDelivery(): void {
+  const chat = studioView?.sessionId === selectedId ? studioView : null;
+  const busy = chat?.busy === true;
+  const text = authoredComposerText().trim();
+  const stop = busy && !text;
+  const send = $<HTMLButtonElement>('chatSend');
+  send.disabled = studioSubmitting || (busy && !!text);
+  send.dataset.action = stop ? 'stop' : 'send';
+  send.classList.toggle('is-stop', stop);
+  ui(send, 'aria-label', () => stop ? t('Stop turn') : t('Send message'));
+  $('sendOptions').hidden = true;
+  $('composerStatus').textContent = chat?.error ?? (busy ? t('Working…') : t('Choose the model in AI Studio. No API key required.'));
+}
+async function sendStudioComposer(text: string, hasFiles: boolean, hasPlan: boolean, controlAction: boolean): Promise<boolean | void> {
+  if (studioSubmitting) return;
+  const id = selectedId, generation = selectionGeneration, key = draftKey();
+  const current = studioView?.sessionId === id ? studioView : null;
+  if (!text) {
+    if (controlAction && current?.busy) await run(api.studioStop(current.id));
+    void refreshSessionControls(); return;
+  }
+  if (current?.busy) return;
+  if (hasFiles) { toast(t('AI Studio supports text messages and local coding. Remove attachments before sending.')); return; }
+  if (hasPlan) { toast(t('AI Studio runs the coding task directly. Send the request without a generated workflow.')); return; }
+  const projectId = selectedLocalProject()?.id;
+  studioSubmitting = true; paintDeliveryControls();
+  try {
+    const result = await run(api.studioSend({ text, coding: true, ...(id ? { sessionId: id } : projectId ? { projectId } : { rootName: $<HTMLSelectElement>('chatProviderRoot').value || undefined }) }));
+    if (!result) return;
+    inputDrafts.delete(key);
+    const same = id === selectedId && generation === selectionGeneration;
+    if (same && authoredComposerText().trim() === text) { $<HTMLTextAreaElement>('chatInput').value = ''; skillPicker?.restore(); }
+    await loadSessions();
+    if (same && id === selectedId && generation === selectionGeneration) selectSession(result.sessionId);
+    return true;
+  } finally { studioSubmitting = false; paintDeliveryControls(); void refreshSessionControls(); }
+}
 function paintDeliveryControls(): void {
+  const studio = paintComposerProvider();
   paintGoalProgress();
   for (const button of document.querySelectorAll<HTMLButtonElement>('#finishQueue .queue-send-now')) button.hidden = !canSendQueuedNow();
   const working = selectedId !== null && controlledSessionId === selectedId && controlledSelection === selectionGeneration && controlledTurnId !== null;
@@ -3261,6 +3336,7 @@ function paintDeliveryControls(): void {
   for (const button of $('sendOptions').querySelectorAll<HTMLElement>('[data-delivery]')) {
     button.setAttribute('aria-checked', String(button.dataset.delivery === (nativeFiles && working && $<HTMLSelectElement>('sendMode').value !== 'tool' ? 'after-turn' : $<HTMLSelectElement>('sendMode').value)));
   }
+  if (studio) paintStudioDelivery();
 }
 function dockAction(label: string | (() => string), symbol: string, click: (event: MouseEvent) => void): HTMLButtonElement {
   const button = el('button', 'dock-action') as HTMLButtonElement;
@@ -3605,6 +3681,26 @@ async function refreshSessionControls(): Promise<void> {
   if (planHost.dataset.sessionId !== (id ?? '')) renderAgentPlan(planHost, id, null);
   if ((userRequestsFor?.sessionId ?? null) !== id) applyUserRequests(id, null);
   const menu = $('sessionControls');
+  paintComposerProvider();
+  if (studioSelected()) {
+    const selection = selectionGeneration;
+    if (id) {
+      const result = await run(api.studioControls(id));
+      if (generation !== controlsGeneration || selectedId !== id || selection !== selectionGeneration) return;
+      studioView = result?.chat ?? null;
+      renderAgentPlan(planHost, id, result?.plan ?? null);
+    } else studioView = null;
+    controlledSessionId = id; controlledSelection = selectionGeneration;
+    controlledTurnId = studioView?.busy ? sessions.find(row => row.id === id)?.activeTurnId ?? null : null;
+    controlledConversationId = studioView?.conversationId ?? null;
+    controlledHeldTurnId = null; controlledCanInject = false; controlledCanSendDirectly = false;
+    controlledQueueAtFinish = false; controlledFinishWaiting = false; controlledStopPending = false; controlledPageless = false;
+    controlledRecovery = []; goalDraftView = null; goalWaitView = null; finishGoalDraftView = null;
+    $<HTMLSelectElement>('chatAutomation').value = 'off';
+    menu.hidden = true;
+    for (const action of ['compactSession', 'cancelCompaction', 'resumeLastSummary']) $(action).hidden = true;
+    paintDeliveryControls(); paintStateLine(); return;
+  }
   if (controlledSessionId !== id || controlledSelection !== selectionGeneration) {
     // Retire the previous selection's projection before awaiting the new owner's IPC.
     // Replace the translation binding too, so a locale refresh cannot revive its status.
@@ -8795,7 +8891,8 @@ export function chatApply(state: AppState, previous?: Config): void {
   const { config, bridge } = state;
   applyRouteSettling(state.status.routeSettlingUntil ?? 0);
   if (bridgePresent !== bridge.present) { bridgePresent = bridge.present; paintPendingInputs(); }
-  selectedTabFollow?.observe(sessions.find(row => row.id === selectedId));
+  const followed = sessions.find(row => row.id === selectedId);
+  selectedTabFollow?.observe(isStudioConversation(followed?.conversationId) ? undefined : followed);
   if (sendCheckConfigured !== !!config.ui.sendCheckUrl) { sendCheckConfigured = !!config.ui.sendCheckUrl; paintPendingInputs(); }
   if (visible && selectedId) void refreshSessionControls();
   applyChatModels(config, previous);
@@ -9434,6 +9531,9 @@ async function stopShownTurn(sessionId: string, turnId: string, conversationId: 
   if (!reply.ok && stillShown()) toast(t(reply.error));
 }
 async function stopCurrentTurn(): Promise<void> {
+  if (studioSelected() && studioView?.sessionId === selectedId) {
+    await run(api.studioStop(studioView.id)); void refreshSessionControls(); return;
+  }
   const id = selectedId, turnId = controlledTurnId ?? controlledHeldTurnId, generation = selectionGeneration;
   if (!id || controlledSessionId !== id || controlledSelection !== generation || !turnId || controlledStopPending) return;
   controlledStopPending = true; paintDeliveryControls();
@@ -9450,6 +9550,7 @@ async function sendComposer(delivery?: 'finish' | 'auto' | 'after-turn', plan?: 
   const projectId = selectedId ? sessions.find(row => row.id === selectedId)?.projectId ?? null : selectedProjectId;
   const images = imageDrafts.get(key) ?? [];
   const text = plan?.[0] ?? (authoredComposerText().trim() || (images.length ? 'Please look at the attached files.' : ''));
+  if (studioSelected()) return sendStudioComposer(text, images.length > 0, !!plan || !!currentPreparedPlan(), controlAction);
   if ($<HTMLButtonElement>('chatSend').disabled) return;
   if (!text) {
     // An empty/repeated form submission is not a Stop gesture. Only activation
@@ -9709,6 +9810,16 @@ function selectNewChat(projectId: string | null = null, branch: typeof newChatBr
 }
 
 export function initChat(next: Deps): void {
+  $('chatProvider').addEventListener('change', () => {
+    studioDraftProviders.set(draftKey(), $<HTMLSelectElement>('chatProvider').value === 'studio' ? 'studio' : 'chatgpt');
+    if ($<HTMLSelectElement>('chatProvider').value === 'studio' && taskPlans.has(draftKey())) dismissTaskPlan();
+    paintDeliveryControls(); void refreshSessionControls();
+  });
+  document.addEventListener('studio:new-chat', () => {
+    selectNewChat(selectedProjectId);
+    studioDraftProviders.set(draftKey(), 'studio');
+    paintDeliveryControls(); void refreshSessionControls();
+  });
   selectedTabFollow = createSelectedTabFollow(id => api.followSessionTab?.(id));
   sidebarCompletion = createSidebarCompletionState();
   sidebarPins = createSidebarPins();

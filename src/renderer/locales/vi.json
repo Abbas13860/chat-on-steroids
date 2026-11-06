@@ -3817,5 +3817,12 @@
   "Refused to check a step for you": "Đã từ chối kiểm tra một bước dành cho bạn",
   "From the sub-agent “{0}”": "Từ tác nhân phụ “{0}”",
   "Run it yourself, in your own terminal: Chat On Steroids does not run or check it.": "Hãy tự chạy lệnh này trong terminal của bạn: Chat On Steroids không chạy hay kiểm tra nó.",
-  "{0} expected files": "{0} tệp dự kiến"
+  "{0} expected files": "{0} tệp dự kiến",
+  "Choose an approved folder": "Chọn thư mục đã cho phép",
+  "Approved folder": "Thư mục đã cho phép",
+  "Choose the model in AI Studio. No API key required.": "Chọn mô hình trong AI Studio. Không cần khóa API.",
+  "Google AI Studio": "Google AI Studio",
+  "AI Studio supports text messages and local coding. Remove attachments before sending.": "AI Studio hỗ trợ tin nhắn văn bản và lập trình cục bộ. Hãy bỏ tệp đính kèm trước khi gửi.",
+  "AI Studio runs the coding task directly. Send the request without a generated workflow.": "AI Studio thực hiện trực tiếp tác vụ lập trình. Hãy gửi yêu cầu không kèm quy trình đã tạo.",
+  "The browser bridge could not start.": "Không thể khởi động kết nối trình duyệt."
 }
