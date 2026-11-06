@@ -23,6 +23,7 @@
       await dom.send(`${receipt}\n(Transport receipt only; do not repeat it in your answer.)\n\n${job.text}`);
       const deadline = Date.now() + 9 * 60_000;
       let accepted = null;
+      let candidate = null;
       while (!retired && Date.now() < deadline) {
         await pause(700);
         const status = await request({ action: 'poll', activeId: job.id });
@@ -38,11 +39,17 @@
         const last = following.at(-1);
         if (accepted && last && last.role === 'Model' && last.done && !state.busy && last.text) {
           if (last.text.length > 200_000) throw new Error('The AI Studio response is too large.');
-          answer = { text: last.text, messageId: last.id, url: location.href }; break;
-        }
+          // Feedback controls may mount before the final Markdown render settles.
+          // Require an unchanged native final across several polls before delivery.
+          if (candidate?.id === last.id && candidate.text === last.text) {
+            if (Date.now() - candidate.since >= 1400) {
+              answer = { text: last.text, messageId: last.id, url: location.href }; break;
+            }
+          } else candidate = { id: last.id, text: last.text, since: Date.now() };
+        } else candidate = null;
         // A successful native final is stronger than an unrelated save/dashboard toast.
         // A generation error with no verified final still stops immediately, without retry.
-        if (state.error && !state.busy) throw new Error(`AI Studio: ${state.error}`);
+        if (state.error && !state.busy && !candidate) throw new Error(`AI Studio: ${state.error}`);
         if (!accepted && Date.now() > deadline - 9 * 60_000 + 20_000) throw new Error('AI Studio did not accept the message. Check its tab; it was not sent again.');
       }
       if (!answer.messageId) throw new Error('AI Studio did not produce a verified final response. Check its tab before sending again.');

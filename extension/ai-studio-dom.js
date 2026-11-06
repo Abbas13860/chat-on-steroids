@@ -15,9 +15,13 @@
   const text = turn => [...turn.querySelectorAll('ms-text-chunk')]
     .filter(chunk => !chunk.closest('ms-thought-chunk'))
     .map(chunk => {
-      const root = chunk.querySelector('ms-cmark-node');
-      // User chunks preserve source text; innerText can insert layout-only line breaks.
-      return root ? (role(turn) === 'User' ? prefix(root) : root.innerText) : '';
+      // A chunk can render multiple sibling Markdown nodes (including JSON lines).
+      // Reading only its first node can return just "{". Nested nodes already belong
+      // to their outer node and must not be duplicated in code or ordinary prose.
+      const roots = [...chunk.querySelectorAll('ms-cmark-node')]
+        .filter(root => !root.parentElement?.closest('ms-cmark-node'));
+      // User prefixes only identify the receipt; model text includes every block.
+      return role(turn) === 'User' ? prefix(chunk) : roots.map(root => root.innerText).join('\n');
     }).join('\n').trim();
   const role = turn => turn.querySelector('[data-turn-role]')?.getAttribute('data-turn-role') ||
     (turn.querySelector('.chat-turn-container.user') ? 'User' : turn.querySelector('.chat-turn-container.model') ? 'Model' : null);

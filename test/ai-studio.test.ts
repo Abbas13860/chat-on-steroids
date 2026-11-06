@@ -139,6 +139,14 @@ describe('observed AI Studio public DOM', () => {
       expect(api.snapshot().error).toBe(alert.textContent);
     } finally { dom.window.close(); }
   });
+  it('reads sibling Markdown blocks completely without duplicating nested code nodes', () => {
+    const { dom, api } = fixture();
+    try {
+      dom.window.document.body.insertAdjacentHTML('beforeend', '<ms-chat-turn id="turn-answer123"><div data-turn-role="Model"><ms-text-chunk><ms-cmark-node>{</ms-cmark-node><ms-cmark-node>"cos_tool":"fresh",</ms-cmark-node><ms-cmark-node>"name":"read",</ms-cmark-node><ms-cmark-node>"arguments":<ms-cmark-node>{"paths":["/project"]}</ms-cmark-node></ms-cmark-node><ms-cmark-node>}</ms-cmark-node></ms-text-chunk></div><div class="turn-footer"><button aria-label="Good response"></button></div></ms-chat-turn>');
+      const answer = api.snapshot().turns[0]!;
+      expect(studioToolCall(answer.text, 'fresh')).toMatchObject({ name: 'read', arguments: { paths: ['/project'] } });
+    } finally { dom.window.close(); }
+  });
 });
 
 it('retains its app binding when AI Studio removes the URL fragment before mounting the composer', async () => {
@@ -165,7 +173,7 @@ it('retains its app binding when AI Studio removes the URL fragment before mount
     if (!handedOut) { handedOut = true; return { ok: true, data: { job: { id: jobId, text: 'Connection test' } } }; }
     return { ok: true, data: {} };
   }) };
-  Object.assign(dom.window, { COS_STUDIO_DOM: { snapshot: () => native, send, stop: vi.fn() }, chrome: { runtime } });
+  Object.assign(dom.window, { Date, COS_STUDIO_DOM: { snapshot: () => native, send, stop: vi.fn() }, chrome: { runtime } });
   try {
     dom.window.eval(readFileSync(new URL('../extension/ai-studio.js', import.meta.url), 'utf8'));
     expect(runtime.sendMessage).not.toHaveBeenCalled();
@@ -173,6 +181,13 @@ it('retains its app binding when AI Studio removes the URL fragment before mount
     native.ready = true;
     await vi.advanceTimersByTimeAsync(2200);
     expect(send).toHaveBeenCalledOnce();
+    expect(results).toHaveLength(0);
+    // A transient first Markdown block and a premature footer must not end the job.
+    native.turns[native.turns.length - 1]!.text = '{';
+    await vi.advanceTimersByTimeAsync(700);
+    expect(results).toHaveLength(0);
+    native.turns[native.turns.length - 1]!.text = 'Connected';
+    await vi.advanceTimersByTimeAsync(2800);
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({ action: 'result', jobId, text: 'Connected', messageId: 'turn-model123' });
   } finally { dom.window.close(); }
